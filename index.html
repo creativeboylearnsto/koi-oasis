@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0a1416">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Koi Oasis">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<title>Koi Oasis</title>
+<link rel="stylesheet" href="fonts.css?v=3">
+<link rel="stylesheet" href="app.css?v=3">
+</head>
+<body>
+<canvas id="pond" aria-label="Your koi pond. Tap the water to make a ripple, tap a koi to see its story."></canvas>
+
+<header class="top">
+  <span class="brand">Koi Oasis</span>
+  <button class="pill" id="pearlPill" aria-label="Pearl history"><span class="ico" data-icon="pearl"></span><span id="pearls">0</span></button>
+</header>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<section id="sheet" class="sheet" hidden aria-live="polite">
+  <div class="grab" aria-hidden="true"></div>
+  <div id="sheetBody"></div>
+</section>
+
+<nav class="tabs" aria-label="Main">
+  <button class="tab" data-tab="today"><span class="ico" data-icon="today"></span>Today</button>
+  <button class="tab" data-tab="sit"><span class="ico" data-icon="sit"></span>Sit</button>
+  <button class="tab" data-tab="shop"><span class="ico" data-icon="pearl"></span>Shop</button>
+  <button class="tab" data-tab="koi"><span class="ico" data-icon="fish"></span>Koi</button>
+</nav>
+
+<div id="sit" class="sit" hidden>
+  <div class="sit-inner">
+    <div class="sit-label" id="sitLabel">Sit</div>
+    <div class="sit-time" id="sitTime">00:00</div>
+    <div class="sit-breath" id="sitBreath">Breathe in</div>
+    <div class="sit-actions" id="sitActions"></div>
+  </div>
+</div>
+
+<div id="modal" class="modal" hidden>
+  <div class="card" id="modalCard" role="dialog" aria-modal="true"></div>
+</div>
+
+<script src="engine.js?v=3"></script>
+<script src="app.js?v=3"></script>
+</body>
+</html>
