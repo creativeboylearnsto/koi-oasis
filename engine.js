@@ -177,14 +177,15 @@ class Pond{
   setLayout(L){
     const w=this.w,h=this.h,mn=Math.min(w,h),s=this.seed;this.layout=L;
     this.pads=(L.pads||[]).map((p,i)=>{
-      if(p.x!=null)return {x:Math.round(p.x*w),y:Math.round(p.y*h),r:p.r||5,notch:hash2(i,3,s)*TAU,ph:hash2(i,4,s)*TAU,flower:p.flower||null};
-      const A=ANCH[Math.floor(i/4)%ANCH.length],a=hash2(i,1,s)*TAU,dd=Math.sqrt(hash2(i,2,s))*.16*mn+(i%4?3:0);
-      return {x:Math.round(A.x*w+Math.cos(a)*dd),y:Math.round(A.y*h+Math.sin(a)*dd),r:3+hash2(i,5,s)*4.5,notch:hash2(i,3,s)*TAU,ph:hash2(i,4,s)*TAU,flower:p.flower||null};
+      const r=p.r||(3+hash2(i,5,s)*4.5);let x,y;
+      if(p.x!=null){x=Math.round(p.x*w);y=Math.round(p.y*h)}
+      else{const A=ANCH[Math.floor(i/4)%ANCH.length],a=hash2(i,1,s)*TAU,dd=Math.sqrt(hash2(i,2,s))*.16*mn+(i%4?3:0);x=Math.round(A.x*w+Math.cos(a)*dd);y=Math.round(A.y*h+Math.sin(a)*dd)}
+      return {i,x,y,r,notch:hash2(i,3,s)*TAU,ph:hash2(i,4,s)*TAU,flower:p.flower||null};
     });
     this.pads.sort((a,b)=>a.r-b.r);
-    this.reedBox=null;this.rocks=null;this.bridge=null;
+    this.reedBox=null;this.reedRegion=null;this.rocks=null;this.bridge=null;
     if(L.reeds){
-      const R=L.reeds===true?{x:.6,y:0,w:.4,h:.2}:L.reeds,rx=R.x*w,ry=R.y*h,rw=R.w*w,rh=R.h*h;this.reedBox={cx:rx+rw/2,cy:ry+rh*.55,ax:rw/2,ay:rh*.45};
+      const R=L.reeds===true?{x:.6,y:0,w:.4,h:.2}:L.reeds;this.reedRegion=R;const rx=R.x*w,ry=R.y*h,rw=R.w*w,rh=R.h*h;this.reedBox={cx:rx+rw/2,cy:ry+rh*.55,ax:rw/2,ay:rh*.45};
       const n=Math.round(rw*rh/11),rr=rng(s+31);this.blades=[];
       for(let i=0;i<n;i++){const a=rr()*TAU,dd=Math.sqrt(rr());this.blades.push({x:this.reedBox.cx+Math.cos(a)*dd*this.reedBox.ax,y:this.reedBox.cy+Math.sin(a)*dd*this.reedBox.ay+3,len:5+rr()*9,lean:(rr()-.5)*.8,ph:rr()*TAU,iris:rr()<.07,light:rr()<.5})}
       this.blades.sort((a,b)=>a.y-b.y);
@@ -303,6 +304,32 @@ class Pond{
   drawGlow(){const L=this.lanternAt,G=this.pal.glow,R=24;if(!L||!G)return;for(let dy=-R;dy<=R;dy++)for(let dx=-R;dx<=R;dx++){const dd=Math.hypot(dx,dy*1.15);if(dd>R)continue;const a=Math.pow(1-dd/R,1.7)*.5;const lv=Math.floor(a*6+bay(L.x+dx,L.y+dy))/6;if(lv>0)this.blend(L.x+dx,L.y+dy,G,lv)}}
   drawMist(){const P=this.pal;if(!P.mist)return;const t=this.t;for(let y=0;y<this.h;y++)for(let x=0;x<this.w;x++){const m=vnoise(x*.035+t*.05,y*.09,77);const a=clamp((m-.5)*1.8,0,1)*.42;const lv=Math.floor(a*4+bay(x,y))/4;if(lv>0)this.blend(x,y,P.mist,lv*.6)}}
   drawHaze(){const t=this.t,hz=this.haze,C=[64,84,62];for(let y=0;y<this.h;y++)for(let x=0;x<this.w;x++){const m=vnoise(x*.05+t*.03,y*.05,91);const a=hz*(.55+.45*m);const lv=Math.floor(a*5+bay(x,y))/5;if(lv>0)this.blend(x,y,C,lv*.7)}}
+  // Arrange mode: find the decor under a point, report where it sits, and outline the one being moved.
+  decorAt(x,y){
+    const w=this.w,h=this.h;
+    if(this.rocks){const R=this.rockAt;if(Math.hypot(x-R.x,(y-R.y)*1.2)<13||(this.lantern&&Math.abs(x-R.x)<6&&y>R.y-14&&y<=R.y))return {kind:'rocks'}}
+    if(this.reedBox){const b=this.reedBox;if(((x-b.cx)/(b.ax+2))**2+((y-b.cy+5)/(b.ay+8))**2<=1)return {kind:'reeds'}}
+    if(this.bridge){const B=this.bridge;if(x>=B.x-2&&x<=B.x+B.len+2&&y>=B.y-3&&y<=B.y+12)return {kind:'bridge'}}
+    for(let j=this.pads.length-1;j>=0;j--){const p=this.pads[j];if(Math.hypot(x-p.x,y-p.y)<=p.r+2)return {kind:'pad',i:p.i}}
+    return null;
+  }
+  decorAnchor(hit){
+    const w=this.w,h=this.h;
+    if(hit.kind==='pad'){const p=this.pads.find(q=>q.i===hit.i);return p&&{x:p.x/w,y:p.y/h}}
+    if(hit.kind==='rocks'&&this.rocks)return {x:this.rockAt.x/w,y:this.rockAt.y/h};
+    if(hit.kind==='reeds'&&this.reedRegion)return {x:this.reedRegion.x,y:this.reedRegion.y};
+    if(hit.kind==='bridge'&&this.bridge)return {x:this.bridge.x/w,y:this.bridge.y/h};
+    return null;
+  }
+  drawHighlight(){
+    const H=this.hl,on=Math.sin(this.t*5)>-.2;if(!on)return;const c=[255,244,214];let cx,cy,rx,ry;
+    if(H.kind==='pad'){const p=this.pads.find(q=>q.i===H.i);if(!p)return;cx=p.x;cy=p.y;rx=ry=p.r+2.5}
+    else if(H.kind==='rocks'&&this.rocks){cx=this.rockAt.x;cy=this.rockAt.y-(this.lantern?3:0);rx=15;ry=this.lantern?14:10}
+    else if(H.kind==='reeds'&&this.reedBox){const b=this.reedBox;cx=b.cx;cy=b.cy-5;rx=b.ax+3;ry=b.ay+9}
+    else if(H.kind==='bridge'&&this.bridge){const B=this.bridge;for(let x=B.x-2;x<=B.x+B.len+2;x+=2){this.blend(x,B.y-3,c,.85);this.blend(x,B.y+11,c,.85)}for(let y=B.y-3;y<=B.y+11;y+=2){this.blend(B.x-2,y,c,.85);this.blend(B.x+B.len+2,y,c,.85)}return}
+    else return;
+    const n=Math.ceil(TAU*Math.max(rx,ry));for(let i=0;i<n;i+=2){const a=i/n*TAU;this.blend(cx+Math.cos(a)*rx,cy+Math.sin(a)*ry,c,.85)}
+  }
   drawRipples(){const L=this.pal.light;this.ripples=this.ripples.filter(r=>this.t-r.t0<3);for(const r of this.ripples){const age=this.t-r.t0;if(age<0)continue;const a=(1-age/3)*.75;for(const [k,f] of [[1,1],[.6,.5]]){const R=age*14*k*r.size;if(R<1)continue;const n=Math.ceil(TAU*R);for(let i=0;i<n;i++){const an=i/n*TAU;this.blend(r.x+Math.cos(an)*R,r.y+Math.sin(an)*R*.9,mix(L,[230,250,245],.4),a*f)}}}}
   step(dt){
     this.t+=dt;if(this.mode==='auto'&&(this._pt=(this._pt||0)+dt)>20){this._pt=0;this.pal=PALC[timeNow()]}
@@ -322,6 +349,7 @@ class Pond{
     if(this.rocks)this.drawRocks();else this.lanternAt=null;
     if(this.c.mist&&this.pal.mist)this.drawMist();
     this.drawGlow();
+    if(this.hl)this.drawHighlight();
     this.drawFood();
     this.drawParticles(dt);
     if(this.haze>0.01)this.drawHaze();

@@ -12,8 +12,8 @@
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <title>Koi Oasis</title>
-<link rel="stylesheet" href="fonts.css?v=4">
-<link rel="stylesheet" href="app.css?v=4">
+<link rel="stylesheet" href="fonts.css?v=5">
+<link rel="stylesheet" href="app.css?v=5">
 </head>
 <body>
 <canvas id="pond" aria-label="Your koi pond. Tap the water to make a ripple, tap a koi to see its story."></canvas>
@@ -24,6 +24,11 @@
 </header>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<div id="arrange" class="arrange" hidden>
+  <p>Drag any lily pad, flower, reeds, the rocks or the bridge to move it.</p>
+  <div class="row" id="arrMain"><button class="btn ghost" id="arrReset">Reset</button><span class="row" id="arrConfirm" hidden><button class="btn ghost" id="arrNo">Keep</button><button class="btn danger" id="arrYes">Reset all</button></span><button class="btn primary" id="arrDone">Done</button></div>
+</div>
 
 <section id="sheet" class="sheet" hidden aria-live="polite">
   <div class="grab" aria-hidden="true"></div>
@@ -50,7 +55,7 @@
   <div class="card" id="modalCard" role="dialog" aria-modal="true"></div>
 </div>
 
-<script src="engine.js?v=4"></script>
-<script src="app.js?v=4"></script>
+<script src="engine.js?v=5"></script>
+<script src="app.js?v=5"></script>
 </body>
 </html>

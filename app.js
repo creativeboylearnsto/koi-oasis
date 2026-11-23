@@ -45,7 +45,10 @@ function markActive(){const d=today();if(!S.days.includes(d))S.days.push(d)}
 function koiStage(k){const n=S.days.filter(d=>d>k.boughtDay).length+(k.bonus||0);return n<14?{stage:'fry',label:'Fry',next:14-n,to:'young'}:n<42?{stage:'young',label:'Young',next:42-n,to:'adult'}:{stage:'adult',label:'Adult',next:0}}
 function koiL(k){const st=koiStage(k).stage;return E.SIZES[st][k.v==='butterfly'?'bfly':'std']}
 const koiList=()=>S.koi.map(k=>({id:k.id,v:k.v,L:koiL(k)}));
-function layout(){const D=S.decor;return {pads:D.items.map(t=>({flower:t==='wlily'?'white':t==='lotus'?'lotus':null})),reeds:D.reeds,rocks:D.rocks,lantern:D.lantern,bridge:D.bridge,moon:false}}
+function layout(){const D=S.decor,P=D.pos||{};const pp=P.pads||{};
+  return {pads:D.items.map((t,i)=>Object.assign({flower:t==='wlily'?'white':t==='lotus'?'lotus':null},pp[i]?{x:pp[i].x,y:pp[i].y}:{})),
+    reeds:D.reeds&&(P.reeds?{x:P.reeds.x,y:P.reeds.y,w:.4,h:.2}:true),rocks:D.rocks&&(P.rocks||true),lantern:D.lantern,
+    bridge:D.bridge&&(P.bridge?{x:P.bridge.x,y:P.bridge.y,len:.84}:true),moon:false}}
 function haze(){const last=S.days.length?S.days[S.days.length-1]:S.createdDay;const gap=daysBetween(last,today());return gap<2?0:gap===2?.25:gap===3?.4:.55}
 
 /* ---------- icons ---------- */
@@ -84,7 +87,14 @@ function refreshPond(){pond.syncKoi(koiList());pond.setLayout(layout());pond.haz
 let lastW=0,lastH=0,rz;
 addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(innerWidth&&innerHeight&&(Math.abs(innerWidth-lastW)>40||Math.abs(innerHeight-lastH)>120))buildPond()},250)});
 function toPond(e){const r=cv.getBoundingClientRect();return {x:(e.clientX-r.left)/r.width*cv.width,y:(e.clientY-r.top)/r.height*cv.height}}
-cv.addEventListener('pointerdown',e=>{ac();if(sitState)return;if(!$('#sheet').hidden){closeSheet();return}const p=toPond(e);const k=pond.hitKoi(p.x,p.y);if(k){openKoi(k.key);return}pond.poke(p.x,p.y)});
+cv.addEventListener('pointerdown',e=>{ac();if(sitState)return;const p=toPond(e);
+  if(arranging){const hit=pond.decorAt(p.x,p.y);if(hit){const a=pond.decorAnchor(hit);drag={hit,sx:p.x/pond.w,sy:p.y/pond.h,ax:a.x,ay:a.y};pond.hl=hit;try{cv.setPointerCapture(e.pointerId)}catch(_){}}else pond.ripple(p.x,p.y,.6);return}
+  if(!$('#sheet').hidden){closeSheet();return}const k=pond.hitKoi(p.x,p.y);if(k){openKoi(k.key);return}pond.poke(p.x,p.y)});
+cv.addEventListener('pointermove',e=>{if(!arranging||!drag)return;e.preventDefault();const p=toPond(e);
+  const nx=clamp01(drag.ax+p.x/pond.w-drag.sx,drag.hit.kind==='bridge'?.82:drag.hit.kind==='reeds'?.4:0),ny=clamp01(drag.ay+p.y/pond.h-drag.sy,0);
+  setPos(drag.hit,nx,ny);if(!moveQueued){moveQueued=true;requestAnimationFrame(()=>{moveQueued=false;pond.setLayout(layout())})}});
+const endDrag=()=>{if(drag){drag=null;save();pond.setLayout(layout())}};
+cv.addEventListener('pointerup',endDrag);cv.addEventListener('pointercancel',endDrag);
 
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let last=performance.now();
@@ -95,6 +105,19 @@ function tick(now){if(document.hidden||!pond)return;const el=now-last;if(el<1000
   pond.speed=sitState?.55:reduce?.6:1;pond.step(dt);for(const p of extra)if(p.cv.isConnected)p.step(dt)}
 function loop(now){requestAnimationFrame(loop);lastRaf=performance.now();tick(lastRaf)}
 setInterval(()=>{const n=performance.now();if(n-lastRaf>250)tick(n)},66);
+/* ---------- Arrange mode ---------- */
+let arranging=false,drag=null,moveQueued=false;
+const clamp01=(v,reserve)=>Math.max(.02,Math.min(.98-reserve,v));
+function setPos(hit,x,y){const D=S.decor;D.pos=D.pos||{};
+  if(hit.kind==='pad'){D.pos.pads=D.pos.pads||{};D.pos.pads[hit.i]={x,y}}else D.pos[hit.kind]={x,y}}
+function startArrange(hl){closeSheet();closeModal();arranging=true;drag=null;document.body.classList.add('arranging');
+  $('#arrange').hidden=false;$('.tabs').hidden=true;pond.hl=hl||null;pond.target=null}
+function endArrange(){arranging=false;drag=null;document.body.classList.remove('arranging');$('#arrange').hidden=true;$('.tabs').hidden=false;pond.hl=null;save();pond.setLayout(layout());toast('Pond saved')}
+$('#arrDone').addEventListener('click',endArrange);
+$('#arrReset').addEventListener('click',()=>{$('#arrReset').hidden=true;$('#arrConfirm').hidden=false});
+$('#arrNo').addEventListener('click',()=>{$('#arrReset').hidden=false;$('#arrConfirm').hidden=true});
+$('#arrYes').addEventListener('click',()=>{S.decor.pos={};save();pond.hl=null;pond.setLayout(layout());$('#arrReset').hidden=false;$('#arrConfirm').hidden=true;toast('Decor back in its starting spots')});
+
 /* ---------- UI helpers ---------- */
 let toastT;
 function toast(html,high){const t=$('#toast');t.innerHTML=html;t.classList.toggle('high',!!high);paintIcons(t);t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2200)}
@@ -235,7 +258,8 @@ function vShop(){
     for(const v of KOI_ORDER){const V=E.VAR[v];const need=V.price-S.pearls;
       h+=`<div class="item"><canvas data-prev-koi="${v}" width="56" height="30"></canvas><b>${V.name}</b><div class="meta"><span class="rar ${V.rarity}">${V.rarity}</span><span class="rew">${V.price}<span class="ico" data-icon="pearl"></span></span></div>
       <button class="btn ${need<=0&&!full?'primary':'ghost'}" data-buy-koi="${v}" ${need>0||full?'disabled':''}>${full?'Pond is full':need>0?`Need ${need} more`:'Buy'}</button></div>`}}
-  else{for(const D of DECOR){const own=D.once?S.decor[D.id]:S.decor.items.filter(x=>x===D.id).length;const maxed=D.once?own:own>=D.max;const locked=D.needs&&!S.decor[D.needs];const need=D.price-S.pearls;
+  else{h=h.replace('<div class="shop-grid">',`<button class="btn ghost block" id="openArrange" style="margin-bottom:12px">Arrange pond</button><div class="shop-grid">`);
+    for(const D of DECOR){const own=D.once?S.decor[D.id]:S.decor.items.filter(x=>x===D.id).length;const maxed=D.once?own:own>=D.max;const locked=D.needs&&!S.decor[D.needs];const need=D.price-S.pearls;
       const label=maxed?(D.once?'In your pond':'Pond is full'):locked?'Needs mossy rocks':need>0?`Need ${need} more`:'Buy';
       h+=`<div class="item"><canvas data-prev-decor="${D.id}" width="56" height="40"></canvas><b>${D.name}</b><div class="meta"><span>${D.once?'':own?own+' in pond':''}</span><span class="rew">${D.price}<span class="ico" data-icon="pearl"></span></span></div>
       <button class="btn ${label==='Buy'?'primary':'ghost'}" data-buy-decor="${D.id}" ${label==='Buy'?'':'disabled'}>${label}</button></div>`}}
@@ -248,6 +272,7 @@ after.shop=()=>{
   document.querySelectorAll('[data-prev-decor]').forEach(c=>{const id=c.dataset.prevDecor;const p=new E.Pond(c,{time:id==='lantern'?'night':'auto',seed:21,layout:Object.assign({particles:null,mist:false,moon:false},DL[id])});p.step(0);extra.push(p)});
   document.querySelectorAll('[data-buy-koi]').forEach(b=>b.addEventListener('click',()=>buyKoi(b.dataset.buyKoi)));
   document.querySelectorAll('[data-buy-decor]').forEach(b=>b.addEventListener('click',()=>buyDecor(b.dataset.buyDecor)));
+  const oa=$('#openArrange');if(oa)oa.addEventListener('click',()=>startArrange(null));
 };
 function buyKoi(v){
   const V=E.VAR[v];if(S.pearls<V.price||S.koi.length>=MAX_KOI)return;
@@ -261,7 +286,9 @@ function buyKoi(v){
 function buyDecor(id){
   const D=DECOR.find(d=>d.id===id);if(!D||S.pearls<D.price)return;
   if(D.once){if(S.decor[id])return;S.decor[id]=true}else{if(S.decor.items.filter(x=>x===id).length>=D.max)return;S.decor.items.push(id)}
-  S.pearls-=D.price;save();updatePearls();closeSheet();refreshPond();blip();toast(`${esc(D.name)} added to your pond`,true);
+  S.pearls-=D.price;save();updatePearls();closeSheet();refreshPond();blip();
+  const hl=D.once?{kind:id==='lantern'?'rocks':id}:{kind:'pad',i:S.decor.items.length-1};
+  startArrange(hl);toast(`Drag your ${esc(D.name.toLowerCase())} where you like`,true);
 }
 
 /* ---------- Koi journal ---------- */
@@ -271,6 +298,7 @@ function vKoi(){
   <div class="koi-list">${S.koi.map(k=>{const st=koiStage(k);return `<button class="koi-row" data-koi="${k.id}"><canvas data-mini="${k.id}" width="40" height="22"></canvas><span><b>${esc(k.name)}</b><small>${E.VAR[k.v].name} · ${st.label}</small><small>${esc(k.note)} · ${fmtDay(k.boughtDay)}</small></span></button>`}).join('')}</div>
   <h3>Settings</h3>
   <div class="setting"><span>Sounds</span><button class="chip" id="setSound" aria-pressed="${S.settings.sound}">${S.settings.sound?'On':'Off'}</button></div>
+  <div class="setting"><span>Move your decor</span><button class="chip" id="setArrange">Arrange pond</button></div>
   <div class="setting"><span>Back up or move your pond</span><button class="chip" id="setBackup">Backup code</button></div>
   <div class="setting"><span>Start over</span><button class="chip" id="setReset">New pond</button></div>`;
 }
@@ -279,6 +307,7 @@ after.koi=()=>{
   document.querySelectorAll('[data-koi]').forEach(b=>b.addEventListener('click',()=>openKoi(b.dataset.koi)));
   $('#setSound').addEventListener('click',()=>{S.settings.sound=!S.settings.sound;save();render()});
   $('#setBackup').addEventListener('click',openBackup);
+  $('#setArrange').addEventListener('click',()=>startArrange(null));
   $('#setReset').addEventListener('click',()=>modal(`<h2>Start a new pond?</h2><p class="muted">This removes every koi, decoration, task and pearl on this phone. Copy a backup code first if you might want it back.</p><div class="row"><button class="btn ghost" id="rNo">Keep my pond</button><button class="btn danger" id="rYes">Start over</button></div>`,c=>{c.querySelector('#rNo').onclick=closeModal;c.querySelector('#rYes').onclick=()=>{S=fresh();save();closeModal();closeSheet();buildPond();updatePearls();toast('New pond ready')}}));
 };
 function openKoi(id){

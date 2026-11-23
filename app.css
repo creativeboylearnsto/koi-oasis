@@ -119,3 +119,8 @@ h3{font-family:var(--display);font-weight:500;font-size:17px;margin:18px 0 8px}
 .hist{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:14px}
 .hist li{display:flex;justify-content:space-between;gap:10px}
 @media (prefers-reduced-motion: reduce){.sheet,.card{animation:none}.toast{transition:none}}
+
+.arrange{position:fixed;left:0;right:0;bottom:0;z-index:7;background:var(--glass);border-top:1px solid var(--line);padding:14px max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 14px) max(16px,env(safe-area-inset-left,0px));display:grid;gap:10px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.arrange p{margin:0;font-size:14px;color:var(--muted);text-align:center}
+.arrange .row{justify-content:center}
+body.arranging #pond{touch-action:none;cursor:grab}
