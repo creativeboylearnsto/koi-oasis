@@ -79,10 +79,19 @@ const cv=$('#pond');let pond,scale=3;
 const extra=[];
 function buildPond(){
   // Some launches report a zero-size window for a moment; fall back to the screen size so the pond always builds.
-  const W=innerWidth||document.documentElement.clientWidth||screen.width||390,H=innerHeight||document.documentElement.clientHeight||screen.height||844;scale=Math.max(2,Math.round(W/135));lastW=W;lastH=H;
+  const W=Math.max(innerWidth||0,document.documentElement.clientWidth||0)||screen.width||390;
+  let H=Math.max(innerHeight||0,document.documentElement.clientHeight||0,window.visualViewport?visualViewport.height:0)||screen.height||844;
+  lastW=W;lastH=H;
+  // Home-screen apps on iPhone report a window shorter than the screen (it stops above the home bar).
+  // Draw the pond as tall as the whole screen so it runs edge to edge, under the home bar too.
+  const standalone=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone;
+  if(standalone&&H>=W)H=Math.max(H,Math.max(screen.width,screen.height));
+  H+=2;scale=Math.max(2,Math.round(W/135));
   cv.width=Math.ceil(W/scale);cv.height=Math.ceil(H/scale);cv.style.width=cv.width*scale+'px';cv.style.height=cv.height*scale+'px';
   pond=new E.Pond(cv,{seed:S.seed,koi:koiList(),layout:layout()});pond.haze=haze();pond.step(0);
+  paintBg();
 }
+function paintBg(){if(!pond)return;const c=pond.pal.water[0];const col=`rgb(${c[0]},${c[1]},${c[2]})`;document.documentElement.style.background=col;document.body.style.background=col;const m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',col)}
 function refreshPond(){pond.syncKoi(koiList());pond.setLayout(layout());pond.haze=haze()}
 let lastW=0,lastH=0,rz;
 addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(innerWidth&&innerHeight&&(Math.abs(innerWidth-lastW)>40||Math.abs(innerHeight-lastH)>120))buildPond()},250)});
@@ -349,7 +358,7 @@ paintIcons();updatePearls();buildPond();requestAnimationFrame(loop);
 if(S.activeSit){const a=S.activeSit;const left=a.minutes*60-(Date.now()-a.start)/1000;if(left>-3600)startSit(a.minutes,a.taskId,a.start);else{S.activeSit=null;save()}}
 else if(!S.tasks.length)setTimeout(()=>openTab('today'),600);
 // Daily refresh: haze and the Today list follow the date.
-setInterval(()=>{pond.haze=haze();if(tab==='today')render()},60000);
+setInterval(()=>{pond.haze=haze();paintBg();if(tab==='today')render()},60000);
 if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 window.__koi={get S(){return S},pond:()=>pond};
 })();
