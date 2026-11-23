@@ -1,6 +1,6 @@
 /* Koi Oasis offline cache. Network first so updates arrive; the cache is the fallback when offline. */
-const CACHE='koi-oasis-v7';
-const SHELL=['./','index.html','fonts.css?v=6','app.css?v=6','engine.js?v=6','app.js?v=6','fonts/Figtree-latin-1.woff2','fonts/Figtree-latin-ext-0.woff2','fonts/IBMPlexMono-latin-3.woff2','fonts/IBMPlexMono-latin-ext-2.woff2','fonts/PixelifySans-latin-5.woff2','fonts/PixelifySans-latin-ext-4.woff2','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png','icons/icon-180.png'];
+const CACHE='koi-oasis-v8';
+const SHELL=['./','index.html','fonts.css?v=7','app.css?v=7','engine.js?v=7','app.js?v=7','fonts/Figtree-latin-1.woff2','fonts/Figtree-latin-ext-0.woff2','fonts/IBMPlexMono-latin-3.woff2','fonts/IBMPlexMono-latin-ext-2.woff2','fonts/PixelifySans-latin-5.woff2','fonts/PixelifySans-latin-ext-4.woff2','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png','icons/icon-180.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{

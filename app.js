@@ -85,8 +85,9 @@ function buildPond(){
   // Home-screen apps on iPhone report a window shorter than the screen (it stops above the home bar).
   // Draw the pond as tall as the whole screen so it runs edge to edge, under the home bar too.
   const standalone=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone;
-  if(standalone&&H>=W)H=Math.max(H,Math.max(screen.width,screen.height));
-  H+=2;scale=Math.max(2,Math.round(W/135));
+  const gap=standalone&&H>=W?Math.min(120,Math.max(0,Math.max(screen.width,screen.height)-H)):0;
+  document.documentElement.style.setProperty('--gap',gap+'px');
+  H+=gap+2;scale=Math.max(2,Math.round(W/135));
   cv.width=Math.ceil(W/scale);cv.height=Math.ceil(H/scale);cv.style.width=cv.width*scale+'px';cv.style.height=cv.height*scale+'px';
   pond=new E.Pond(cv,{seed:S.seed,koi:koiList(),layout:layout()});pond.haze=haze();pond.step(0);
   paintBg();
