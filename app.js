@@ -75,13 +75,14 @@ function waterOff(){if(!water||!AC)return;const w=water;water=null;w.g.gain.canc
 const cv=$('#pond');let pond,scale=3;
 const extra=[];
 function buildPond(){
-  const W=innerWidth,H=innerHeight;scale=Math.max(2,Math.round(W/135));
+  // Some launches report a zero-size window for a moment; fall back to the screen size so the pond always builds.
+  const W=innerWidth||document.documentElement.clientWidth||screen.width||390,H=innerHeight||document.documentElement.clientHeight||screen.height||844;scale=Math.max(2,Math.round(W/135));lastW=W;lastH=H;
   cv.width=Math.ceil(W/scale);cv.height=Math.ceil(H/scale);cv.style.width=cv.width*scale+'px';cv.style.height=cv.height*scale+'px';
   pond=new E.Pond(cv,{seed:S.seed,koi:koiList(),layout:layout()});pond.haze=haze();pond.step(0);
 }
 function refreshPond(){pond.syncKoi(koiList());pond.setLayout(layout());pond.haze=haze()}
-let lastW=innerWidth,lastH=innerHeight,rz;
-addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(Math.abs(innerWidth-lastW)>40||Math.abs(innerHeight-lastH)>120){lastW=innerWidth;lastH=innerHeight;buildPond()}},250)});
+let lastW=0,lastH=0,rz;
+addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(innerWidth&&innerHeight&&(Math.abs(innerWidth-lastW)>40||Math.abs(innerHeight-lastH)>120))buildPond()},250)});
 function toPond(e){const r=cv.getBoundingClientRect();return {x:(e.clientX-r.left)/r.width*cv.width,y:(e.clientY-r.top)/r.height*cv.height}}
 cv.addEventListener('pointerdown',e=>{ac();if(sitState)return;if(!$('#sheet').hidden){closeSheet();return}const p=toPond(e);const k=pond.hitKoi(p.x,p.y);if(k){openKoi(k.key);return}pond.poke(p.x,p.y)});
 
@@ -90,7 +91,7 @@ let last=performance.now();
 // The pond always animates: the swimming koi are the content. Reduce Motion only calms the pond.
 // iPhone Safari can hold back animation frames until the first tap, so a timer keeps the pond going if frames stall.
 let lastRaf=0;
-function tick(now){if(document.hidden)return;const el=now-last;if(el<1000/15)return;const dt=Math.min(.15,el/1000);last=now;
+function tick(now){if(document.hidden||!pond)return;const el=now-last;if(el<1000/15)return;const dt=Math.min(.15,el/1000);last=now;
   pond.speed=sitState?.55:reduce?.6:1;pond.step(dt);for(const p of extra)if(p.cv.isConnected)p.step(dt)}
 function loop(now){requestAnimationFrame(loop);lastRaf=performance.now();tick(lastRaf)}
 setInterval(()=>{const n=performance.now();if(n-lastRaf>250)tick(n)},66);
